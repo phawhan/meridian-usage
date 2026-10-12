@@ -11,7 +11,9 @@ from app.services.sync import run_sync
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="meridian", description="Meridian usage service")
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("sync", help="take in new files under DATA_DIR (directory snapshot)")
+    commands.add_parser(
+        "sync", help="take in new files under DATA_DIR (directory snapshot, usage exports)"
+    )
     parser.parse_args(argv)
 
     settings = Settings()
@@ -27,8 +29,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"  {label}: read {counts.rows_read}, inserted {counts.rows_inserted},"
                 f" updated {counts.rows_updated}, deactivated {counts.rows_deactivated}"
             )
-    for error in result.errors:
-        print(f"  rejected: {error}")
+    for file in report.usage.files:
+        line = f"{file.path}: {file.status}"
+        if file.counts:
+            c = file.counts
+            line += (
+                f" (read {c.rows_read}, inserted {c.rows_inserted}, updated {c.rows_updated},"
+                f" quarantined {c.rows_quarantined})"
+            )
+        print(f"  {line}")
+    usage = report.usage
+    print(
+        f"  facts: {usage.facts} rebuilt across {usage.partitions_rebuilt} day partitions;"
+        f" issues: {usage.errors} errors, {usage.warnings} warnings"
+    )
+    for problem in report.problems:
+        print(f"  rejected: {problem}")
     return 0 if report.ok else 1
 
 

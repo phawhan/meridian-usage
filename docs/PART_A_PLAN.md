@@ -26,12 +26,13 @@ meridian-usage/
 │   └── ai-usage-log.md           what AI did, what you overruled (feeds README; written by you)
 ├── backend/
 │   ├── pyproject.toml
+│   ├── database/             timestamped SQL migrations + README (conventions)
 │   ├── uv.lock
 │   ├── app/
 │   │   ├── main.py               FastAPI app + lifespan (load config, sync directory, ingest, seed)
 │   │   ├── cli.py                `meridian sync` (one pass: directory now, usage exports in S2)
 │   │   ├── core/                 config.py (settings), env_config.py (YAML -> Policy), periods.py, money.py
-│   │   ├── db/                   schema.sql, session.py (sqlite3 connection, schema apply, env marker)
+│   │   ├── db/                   session.py (connection, env marker), migrations.py (runner)
 │   │   ├── models/               pydantic: sources/ (one module per source), domain.py, api.py, denial.py
 │   │   ├── repositories/         sync_log.py, directory.py, raw.py, facts.py, capabilities.py
 │   │   ├── services/
@@ -146,7 +147,7 @@ AC: `make setup && make test` green; `make run` serves `/api/v1/healthz`; `make 
 | S0.1 | `git init`, layout, `.gitignore`, copy starter-kit data/environments/contracts | n/a |
 | S0.2 | `backend/pyproject.toml` (above), `uv sync`, empty app with `/api/v1/healthz` | healthz test |
 | S0.3 | `core/config.py` (pydantic-settings): `APP_ENV`, `DB_PATH`, `DATA_DIR`, `ENV_DIR` | bad `APP_ENV` fails |
-| S0.4 | `db/session.py` + `schema.sql`, idempotent apply, env marker guard | apply twice ok; wrong env refused |
+| S0.4 | `db/session.py` + `db/migrations.py` running `backend/database/*.sql` (D11), env marker guard | applied once; edited migration refused; failed migration rolls back; wrong env refused before migrating |
 | S0.5 | Frontend: `npm create vite` (react-ts), TanStack Query, `/api` proxy | `npm run build` passes |
 | S0.6 | Makefile, `docs/decisions.md`, `docs/ai-usage-log.md` | n/a |
 
@@ -161,7 +162,7 @@ AC: a changed snapshot is applied in one transaction (upsert present, deactivate
 | S1.3 | `sync_run` + `source_file` bookkeeping; skip when the latest version recorded at the same path (applied or rejected) has the same sha256; apply users + groups as a pair | same hash skipped; older snapshot re-delivered is re-applied; leaver deactivated, not deleted |
 | S1.4 | Lookups: user_id, email, rbac_group_id, gcp_project_id | lookup tests |
 
-### S2 Usage ingestion pipeline
+### S2 Usage ingestion pipeline (done 2026-10-12)
 **As a** platform owner **I want** both exports merged into one model **so that** I can compare usage and cost across platforms.
 Stages: **discover -> extract (raw) -> transform -> attribute -> load (facts) -> report**
 AC: re-run with no new files changes nothing; a delta file updates only its days; sum(facts) == sum(raw) for tokens and cost per platform; every raw row lands in a fact or in `ingest_issue`; every raw row carries its `source_file_id`; runs at startup and via `meridian ingest`.

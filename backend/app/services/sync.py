@@ -1,6 +1,7 @@
 """One sync pass: take in whatever is new under DATA_DIR, recorded as a sync_run.
 
-S1 handles the directory snapshot; S2 adds usage exports to the same pass.
+Order matters: the directory first, because usage is attributed through it. When the
+directory changes, every usage partition is re-derived so attribution follows.
 """
 
 import logging
@@ -11,6 +12,7 @@ from typing import Literal
 from app.core.config import Settings
 from app.repositories import sync_log
 from app.services.directory_sync import DirectorySyncResult, sync_directory
+from app.services.ingestion.pipeline import IngestResult, ingest_usage
 
 log = logging.getLogger(__name__)
 
@@ -23,10 +25,17 @@ class DirectoryUnavailableError(RuntimeError):
 class SyncReport:
     run_id: int
     directory: DirectorySyncResult
+    usage: IngestResult
+
+    @property
+    def problems(self) -> list[str]:
+        found = [f"directory: {e}" for e in self.directory.errors]
+        found += [f"{f.path}: {f.error}" for f in self.usage.rejected]
+        return found
 
     @property
     def ok(self) -> bool:
-        return self.directory.status != "rejected"
+        return not self.problems
 
 
 def run_sync(
@@ -34,15 +43,20 @@ def run_sync(
 ) -> SyncReport:
     run_id = sync_log.start_run(conn, trigger)
     try:
-        result = sync_directory(conn, settings.data_dir, run_id)
+        directory = sync_directory(conn, settings.data_dir, run_id)
+        if directory.status == "rejected" and not sync_log.has_applied(conn, "directory_users"):
+            raise DirectoryUnavailableError(
+                f"no valid directory snapshot available: {'; '.join(directory.errors)}"
+            )
+        usage = ingest_usage(
+            conn, settings.data_dir, run_id, rebuild_all=directory.status == "applied"
+        )
     except Exception as exc:
         sync_log.finish_run(conn, run_id, error=f"{type(exc).__name__}: {exc}")
         raise
 
-    error = "; ".join(result.errors) if result.status == "rejected" else None
-    sync_log.finish_run(conn, run_id, error=error)
-    if error:
-        if not sync_log.has_applied(conn, "directory_users"):
-            raise DirectoryUnavailableError(f"no valid directory snapshot available: {error}")
-        log.warning("directory snapshot rejected, keeping the previous mirror: %s", error)
-    return SyncReport(run_id=run_id, directory=result)
+    report = SyncReport(run_id=run_id, directory=directory, usage=usage)
+    sync_log.finish_run(conn, run_id, error="; ".join(report.problems) or None)
+    for problem in report.problems:
+        log.warning("sync run %s: rejected %s", run_id, problem)
+    return report

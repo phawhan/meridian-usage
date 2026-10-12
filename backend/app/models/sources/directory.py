@@ -1,19 +1,12 @@
-"""Shapes of the identity provider snapshot files in data/directory/.
+"""Shapes of the identity provider snapshot files in data/directory/."""
 
-Unknown fields are ignored so a richer SCIM export doesn't break the sync; the fields the
-service relies on are required.
-"""
-
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import field_validator
 
 from app.models.domain import Role
+from app.models.sources.base import SourceModel
 
 
-class _Source(BaseModel):
-    model_config = ConfigDict(extra="ignore", frozen=True)
-
-
-class DirectoryUser(_Source):
+class DirectoryUser(SourceModel):
     user_id: str
     email: str
     name: str
@@ -29,7 +22,7 @@ class DirectoryUser(_Source):
         return value.strip().lower()
 
 
-class DirectoryGroup(_Source):
+class DirectoryGroup(SourceModel):
     group_id: str
     name: str
     team_lead_user_id: str
@@ -39,11 +32,11 @@ class DirectoryGroup(_Source):
     cost_centre: str
 
 
-class UsersFile(_Source):
+class UsersFile(SourceModel):
     exported_at: str
     users: list[DirectoryUser]
 
 
-class GroupsFile(_Source):
+class GroupsFile(SourceModel):
     exported_at: str
     groups: list[DirectoryGroup]

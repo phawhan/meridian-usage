@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-SCHEMA_FILE = Path(__file__).with_name("schema.sql")
+from app.db.migrations import MIGRATIONS_DIR, migrate
 
 
 class EnvironmentMismatchError(RuntimeError):
@@ -16,21 +16,32 @@ def connect(path: Path) -> sqlite3.Connection:
     return conn
 
 
-def init_db(conn: sqlite3.Connection, app_env: str) -> None:
-    """Apply the schema and stamp the database with its environment on first use.
+def _stored_environment(conn: sqlite3.Connection) -> str | None:
+    has_meta = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'meta'"
+    ).fetchone()
+    if not has_meta:
+        return None
+    row = conn.execute("SELECT value FROM meta WHERE key = 'environment'").fetchone()
+    return row["value"] if row else None
 
-    Refuses to continue if the database already belongs to another environment, so prod
-    rules never run against dev switch states or the other way round (D9).
+
+def init_db(conn: sqlite3.Connection, app_env: str, migrations_dir: Path = MIGRATIONS_DIR) -> None:
+    """Check the environment marker, apply pending migrations, stamp a new database.
+
+    The marker is checked before migrating, so starting as dev against prod's database
+    changes nothing in it (D9).
     """
-    conn.executescript(SCHEMA_FILE.read_text())
-    with conn:
-        conn.execute(
-            "INSERT OR IGNORE INTO meta (key, value, created_by, updated_by)"
-            " VALUES ('environment', ?, 'system:startup', 'system:startup')",
-            (app_env,),
-        )
-    stored = conn.execute("SELECT value FROM meta WHERE key = 'environment'").fetchone()["value"]
-    if stored != app_env:
+    stored = _stored_environment(conn)
+    if stored is not None and stored != app_env:
         raise EnvironmentMismatchError(
             f"database belongs to '{stored}', refusing to start as '{app_env}'"
         )
+    migrate(conn, migrations_dir)
+    if stored is None:
+        with conn:
+            conn.execute(
+                "INSERT INTO meta (key, value, created_by, updated_by)"
+                " VALUES ('environment', ?, 'system:startup', 'system:startup')",
+                (app_env,),
+            )
