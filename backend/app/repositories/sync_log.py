@@ -109,3 +109,11 @@ def set_counts(conn: sqlite3.Connection, file_id: int, counts: FileCounts) -> No
             file_id,
         ),
     )
+
+
+def latest_applied_id(conn: sqlite3.Connection, path: str) -> int | None:
+    row = conn.execute(
+        "SELECT id FROM source_file WHERE path = ? AND status = 'applied' ORDER BY id DESC LIMIT 1",
+        (path,),
+    ).fetchone()
+    return row["id"] if row else None

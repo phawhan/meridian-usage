@@ -30,3 +30,5 @@ Each file is one schema change, applied once, in filename order, by `app/db/migr
 | 20261012100100 | S1 | `groups`, `users`, `user_groups` |
 | 20261012110000 | S2 | `raw_claude_usage`, `raw_claude_cost`, `raw_gemini_billing` |
 | 20261012110100 | S2 | `usage_fact`, `ingest_issue` |
+| 20261012120000 | S3 | `capability_state`, `capability_audit` |
+| 20261012120100 | S3 | `access_denial` |

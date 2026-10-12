@@ -22,3 +22,7 @@ class Group(BaseModel):
     gcp_project_id: str
     cost_centre: str
     active: bool
+
+
+Capability = Literal["usage-connector", "web-search", "code-execution"]
+CAPABILITIES: tuple[Capability, ...] = ("usage-connector", "web-search", "code-execution")

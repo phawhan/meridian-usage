@@ -8,6 +8,7 @@ from typing import Any
 import pytest
 
 from app.core.config import REPO_ROOT, Settings
+from app.core.env_config import load_policy
 from app.db.session import connect, init_db
 from app.repositories import directory
 from app.services.sync import DirectoryUnavailableError, run_sync
@@ -51,7 +52,7 @@ def count(conn: sqlite3.Connection, sql: str) -> int:
 def test_first_sync_mirrors_the_snapshot_with_audit_columns(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.status == "applied"
     assert report.directory.users and report.directory.users.rows_inserted == 22
@@ -62,6 +63,7 @@ def test_first_sync_mirrors_the_snapshot_with_audit_columns(
     assert [tuple(f) for f in files] == [
         ("directory_users", "data/directory/users.json", "applied"),
         ("directory_groups", "data/directory/groups.json", "applied"),
+        ("environment_config", "environments/dev.yaml", "applied"),
     ]
     priya = conn.execute("SELECT * FROM users WHERE user_id = ?", (PRIYA,)).fetchone()
     assert priya["created_by"] == priya["updated_by"] == "system:directory-sync"
@@ -73,21 +75,21 @@ def test_first_sync_mirrors_the_snapshot_with_audit_columns(
 def test_unchanged_snapshot_records_nothing_new(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
-    report = run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.status == "unchanged"
-    assert count(conn, "SELECT COUNT(*) FROM source_file") == 2
+    assert count(conn, "SELECT COUNT(*) FROM source_file") == 3  # users, groups, env config
     assert count(conn, "SELECT COUNT(*) FROM sync_run") == 2
 
 
 def test_leaver_is_deactivated_not_deleted(conn: sqlite3.Connection, settings: Settings) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     first_users_file = conn.execute("SELECT source_file_id FROM users WHERE user_id = ?", (PRIYA,))
     first_id = first_users_file.fetchone()[0]
     edit(settings, "users.json", drop_daniel)
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.users is not None
     assert (report.directory.users.rows_deactivated, report.directory.users.rows_updated) == (1, 0)
@@ -102,12 +104,12 @@ def test_redelivered_older_snapshot_rolls_back(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
     original = (settings.data_dir / "directory" / "users.json").read_bytes()
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     edit(settings, "users.json", drop_daniel)
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     (settings.data_dir / "directory" / "users.json").write_bytes(original)
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.status == "applied"
     daniel = directory.get_user(conn, DANIEL)
@@ -117,14 +119,14 @@ def test_redelivered_older_snapshot_rolls_back(
 def test_changed_field_updates_row_and_keeps_created_at(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     before = conn.execute("SELECT * FROM users WHERE user_id = ?", (DANIEL,)).fetchone()
 
     def rename(users: dict[str, Any]) -> None:
         next(u for u in users["users"] if u["user_id"] == DANIEL)["name"] = "Dan Okafor"
 
     edit(settings, "users.json", rename)
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     after = conn.execute("SELECT * FROM users WHERE user_id = ?", (DANIEL,)).fetchone()
     assert report.directory.users is not None and report.directory.users.rows_updated == 1
@@ -136,14 +138,14 @@ def test_changed_field_updates_row_and_keeps_created_at(
 def test_invalid_snapshot_is_rejected_once_and_old_mirror_kept(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     def demote_priya(users: dict[str, Any]) -> None:
         next(u for u in users["users"] if u["user_id"] == PRIYA)["role"] = "member"
 
     edit(settings, "users.json", demote_priya)
-    report = run_sync(conn, settings, trigger="cli")
-    again = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
+    again = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.status == "rejected"
     assert again.directory.status == "unchanged"  # same bytes, same verdict, logged once
@@ -158,10 +160,10 @@ def test_invalid_snapshot_is_rejected_once_and_old_mirror_kept(
 def test_malformed_file_is_rejected_with_field_detail(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     edit(settings, "users.json", lambda users: users["users"][0].update(role="superuser"))
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.directory.status == "rejected"
     assert any("users.0.role" in e for e in report.directory.errors)
@@ -173,12 +175,12 @@ def test_no_valid_snapshot_ever_refuses_to_start(
     edit(settings, "groups.json", lambda groups: groups.update(groups=[]))
 
     with pytest.raises(DirectoryUnavailableError, match="no groups"):
-        run_sync(conn, settings, trigger="startup")
+        run_sync(conn, settings, load_policy(settings), trigger="startup")
     assert conn.execute("SELECT status FROM sync_run").fetchone()[0] == "failed"
 
 
 def test_lookups_resolve_platform_identifiers(conn: sqlite3.Connection, settings: Settings) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     by_email = directory.get_user_by_email(conn, " Priya.Nair@MeridianLS.example")
     by_rbac = directory.get_group_by_rbac_id(conn, "rbac_group_33DEEC83113481C9BD69498282")

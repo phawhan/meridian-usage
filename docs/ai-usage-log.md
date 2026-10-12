@@ -41,3 +41,7 @@ My working notes on how I used AI while building this, kept as I went. The READM
 | S2: two test expectations were wrong while the code was right (Python 3.12 `sum()`, Decimal trailing zeros) | **Fixed the tests, not the code** |
 | S2: its precision test still passed with a float-parsing bug injected, so it tested nothing | **Caught by the deliberate-bug check;** rewritten with a 17-digit cost. 8 injected bugs, 8 caught |
 | S2: fact totals reconciled against totals computed straight from the files (Claude $2,830.28776008, Gemini $287.839433) | **Kept as a regression test** |
+| S3: offered an `access_denial` log of every refused request as an option | **Chose** to add it: evidence for security review and for the Part B denial demo (D23) |
+| S3: wrote the permission matrix test as a hand-filled table from the starter kit's environment table, not derived from the code | **Accepted**; a test that computes expectations from the code can't catch the code being wrong |
+| S3: deliberate-bug check on the permission model: 2 of 6 bugs survived (leads writing other groups if the YAML ever said `all`; deactivated users still accepted) | **Required tests for both;** now 6 of 6 caught (D27) |
+| S3: a test helper leaked a SQLite connection (`with sqlite3.connect()` commits but doesn't close) | **Caught by the strict pytest setting** I kept from S0; fixed |

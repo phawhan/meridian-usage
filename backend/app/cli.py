@@ -4,6 +4,7 @@ import argparse
 from contextlib import closing
 
 from app.core.config import Settings
+from app.core.env_config import load_policy
 from app.db.session import connect, init_db
 from app.services.sync import run_sync
 
@@ -17,9 +18,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.parse_args(argv)
 
     settings = Settings()
+    policy = load_policy(settings)
     with closing(connect(settings.database_file)) as conn:
         init_db(conn, settings.app_env)
-        report = run_sync(conn, settings, trigger="cli")
+        report = run_sync(conn, settings, policy, trigger="cli")
 
     result = report.directory
     print(f"[{settings.app_env}] sync run {report.run_id}: directory {result.status}")
@@ -43,6 +45,7 @@ def main(argv: list[str] | None = None) -> int:
         f"  facts: {usage.facts} rebuilt across {usage.partitions_rebuilt} day partitions;"
         f" issues: {usage.errors} errors, {usage.warnings} warnings"
     )
+    print(f"  capability switches seeded: {report.switches_seeded} ({policy.path})")
     for problem in report.problems:
         print(f"  rejected: {problem}")
     return 0 if report.ok else 1

@@ -178,7 +178,7 @@ AC: re-run with no new files changes nothing; a delta file updates only its days
 | S2.7 | Report: `rows_*` counts on `source_file`, run status on `sync_run` | counts match |
 | S2.8 | Add ingestion to `services/sync.run_sync` (already called by lifespan + `meridian sync`) | startup ingests once |
 
-### S3 Policy and capability controls
+### S3 Policy and capability controls (done 2026-10-12)
 **As a** platform admin **I want** per-group capability switches with enforced rules **so that** only the right people can see and change them.
 AC: invalid env YAML stops startup; missing/unknown `X-User-Id` -> 401; missing scope or invisible group -> 403 `Denial`; team leads write only their own group (D2); baseline fills missing rows only; every change audited.
 

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from app.core.config import REPO_ROOT, Settings
+from app.core.env_config import load_policy
 from app.db.session import connect, init_db
 from app.services.sync import run_sync
 
@@ -59,7 +60,7 @@ def test_facts_reconcile_with_the_source_files(
     claude_cost = json.loads((settings.data_dir / "claude/user_cost_report.json").read_text())
     gemini = gemini_rows(settings)
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert report.ok and report.usage.errors == 0 and report.usage.warnings == 0
     assert totals(conn, "claude") == (
@@ -78,7 +79,7 @@ def test_facts_reconcile_with_the_source_files(
 def test_every_raw_row_is_in_a_fact_or_an_issue(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     for table in ("raw_claude_usage", "raw_claude_cost", "raw_gemini_billing"):
         raw_ids = {r[0] for r in conn.execute(f"SELECT id FROM {table}")}
         in_facts = {
@@ -98,10 +99,10 @@ def test_every_raw_row_is_in_a_fact_or_an_issue(
 
 
 def test_second_pass_changes_nothing(conn: sqlite3.Connection, settings: Settings) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     before = totals(conn, "claude"), totals(conn, "gemini")
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert {f.status for f in report.usage.files} == {"unchanged"}
     assert report.usage.partitions_rebuilt == 0
@@ -111,7 +112,7 @@ def test_second_pass_changes_nothing(conn: sqlite3.Connection, settings: Setting
 def test_delta_file_with_a_newer_correction_rebuilds_only_its_day(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     _, cost_before = totals(conn, "gemini")
     corrected = gemini_rows(settings)[0]
     old_cost = corrected["cost"]
@@ -119,7 +120,7 @@ def test_delta_file_with_a_newer_correction_rebuilds_only_its_day(
     corrected["export_time"] = "2026-10-01 00:00:00 UTC"  # newer than the original
     write_gemini(settings, "gcp_billing_export_v1_delta_20261001.jsonl", [corrected])
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     delta = next(f for f in report.usage.files if "delta" in f.path)
     assert delta.counts is not None and (delta.counts.rows_inserted, delta.counts.rows_updated) == (
@@ -133,14 +134,14 @@ def test_delta_file_with_a_newer_correction_rebuilds_only_its_day(
 def test_older_export_arriving_later_does_not_overwrite(
     conn: sqlite3.Connection, settings: Settings
 ) -> None:
-    run_sync(conn, settings, trigger="cli")
+    run_sync(conn, settings, load_policy(settings), trigger="cli")
     before = totals(conn, "gemini")
     stale = gemini_rows(settings)[0]
     stale["cost"] = Decimal("999")
     stale["export_time"] = "2026-08-01 00:00:00 UTC"  # older than what we hold
     write_gemini(settings, "gcp_billing_export_v1_stale.jsonl", [stale])
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     stale_file = next(f for f in report.usage.files if "stale" in f.path)
     assert stale_file.counts is not None and stale_file.counts.rows_updated == 0
@@ -156,7 +157,7 @@ def test_unknown_owner_is_quarantined_then_recovered_when_directory_catches_up(
         row["labels"].append({"key": "owner", "value": "new.hire@meridianls.example"})
     write_gemini(settings, GEMINI_FILE, rows)
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
     issue = conn.execute("SELECT * FROM ingest_issue").fetchone()
     assert report.usage.errors == 1 and issue["code"] == "unknown_user"
     assert "new.hire@meridianls.example" in issue["detail"]
@@ -170,7 +171,7 @@ def test_unknown_owner_is_quarantined_then_recovered_when_directory_catches_up(
         | {"user_id": "user_NEWHIRE", "email": "new.hire@meridianls.example", "name": "New Hire"}
     )
     users_path.write_text(json.dumps(users))
-    recovered = run_sync(conn, settings, trigger="cli")
+    recovered = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     assert recovered.usage.errors == 0
     assert conn.execute("SELECT COUNT(*) FROM ingest_issue").fetchone()[0] == 0
@@ -186,7 +187,7 @@ def test_file_with_duplicate_keys_is_rejected_whole_and_others_still_load(
     row = gemini_rows(settings)[0]
     write_gemini(settings, "gcp_billing_export_v1_dupe.jsonl", [row, row])
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     dupe = next(f for f in report.usage.files if "dupe" in f.path)
     assert dupe.status == "rejected" and dupe.error and "appear twice" in dupe.error
@@ -200,7 +201,7 @@ def test_malformed_line_rejects_the_file_with_its_line_number(
 ) -> None:
     (settings.data_dir / "gemini" / "gcp_billing_export_v1_bad.jsonl").write_text('{"cost": 1}\n')
 
-    report = run_sync(conn, settings, trigger="cli")
+    report = run_sync(conn, settings, load_policy(settings), trigger="cli")
 
     bad = next(f for f in report.usage.files if "bad" in f.path)
     assert bad.status == "rejected" and bad.error and bad.error.startswith("line 1:")
