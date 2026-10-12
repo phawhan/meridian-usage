@@ -17,4 +17,10 @@ Tool: Claude Code (VS Code extension). Format: date | what AI did | what I decid
 | Recommended Gemini CLI extension as primary platform after reading the JD | Accepted; Claude Desktop config as a rendered bonus |
 
 ## Build log
-<!-- one row per story as it lands -->
+
+| What AI did | What I decided |
+|---|---|
+| S0.2 scaffold: AI swapped dev dep `httpx` -> `httpx2` after a Starlette 1.7 deprecation warning, verified in the installed source first | Accepted |
+| S0.4 tests: AI's first version leaked SQLite connections (Python 3.13 ResourceWarning) | Fixed with `closing()`; pytest now turns ResourceWarning into a failure so leaks can't come back |
+| S0 smoke test: env-guard check printed nothing; AI re-ran it rather than assuming success (macOS has no `timeout`) | Guard confirmed: `database belongs to 'prod', refusing to start as 'dev'` |
+| S0.5: `create-vite` now ships oxlint instead of ESLint, TS 6, Vite 8 | Kept the template defaults rather than swapping tooling |

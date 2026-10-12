@@ -79,7 +79,7 @@ dependencies = [
 meridian = "app.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8.3", "httpx>=0.27", "ruff>=0.8", "mypy>=1.13", "types-pyyaml"]
+dev = ["pytest>=8.3", "httpx2>=2.13", "ruff>=0.8", "mypy>=1.13", "types-pyyaml"]
 
 [build-system]
 requires = ["hatchling"]
@@ -135,7 +135,7 @@ YAML `scopes` = policy, reloaded in full every start. YAML `capability_defaults`
 
 ## 4. Stories
 
-### S0 Foundations
+### S0 Foundations (done 2026-10-12)
 **As a** developer **I want** a runnable skeleton **so that** every story lands in a known place.
 AC: `make setup && make test` green; `make run` serves `/api/v1/healthz`; `make dev-web` proxies to the backend.
 

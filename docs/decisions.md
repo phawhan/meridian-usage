@@ -12,3 +12,6 @@ Running log; each entry feeds the README. Format: ID, decision, why.
 - D8 Directory mirrored into read-only tables (joins, FK integrity); no API writes to it.
 - D9 One DB per environment, with an env marker guard.
 - D10 Missing `group_visibility` in YAML defaults to `own_group` (fail closed).
+- D11 Schema grows per story in one idempotent `schema.sql` (CREATE ... IF NOT EXISTS). No migration tool: in dev, delete `var/<env>.db` after a schema change. Real deployment would add Alembic-style migrations.
+- D12 Plain `sqlite3`, no ORM: about 10 tables, SQL stays readable for reviewers.
+- D13 The frontend calls only relative `/api`; Vite proxies to FastAPI in dev, so there's no CORS configuration to get wrong.
