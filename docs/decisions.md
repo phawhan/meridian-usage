@@ -30,3 +30,8 @@ Running log; each entry feeds the README. Format: ID, decision, why.
 - D26 Each audit row records `policy_file_id`, the environment config version in force, so "who changed what under which rules" is answerable from the database.
 - D27 D2 holds regardless of YAML: even if `capabilities:write` were given `group_visibility: all`, team leads can only change their own group. Platform admins change any group.
 - D28 The environment config is validated strictly (unknown keys, roles or capabilities, a missing scope or capability, `environment:` not matching `APP_ENV`, `enabled_for` naming a group the directory doesn't have): any of these stops startup.
+- D29 Every route resolves its groups through one helper (`api/access.py`): the access check runs before the existence check, so a team lead asking for an unknown group gets a denial (403), not a 404 that would confirm the group doesn't exist. Admins get 404.
+- D30 Omitted `group`: summary uses the caller's own group (as the tool contract says); breakdown, top users, capabilities and audit cover every group the caller may see. A caller who may see none is refused, not shown an empty result.
+- D31 Responses carry `period.complete`: false when the data doesn't cover the whole period (2026-08 starts on the 3rd, 2026-09 ends on the 27th), so a partial month isn't mistaken for a quiet one.
+- D32 `GET /directory/users` is unauthenticated: it exists only for the simulated-identity persona switcher. A real deployment takes identity from SSO and drops this endpoint.
+- D33 API responses are tested against `contracts/tools.schema.json`, so the shapes the Part B tools return are fixed from Part A onward.

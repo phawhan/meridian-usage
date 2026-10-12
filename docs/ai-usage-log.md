@@ -45,3 +45,7 @@ My working notes on how I used AI while building this, kept as I went. The READM
 | S3: wrote the permission matrix test as a hand-filled table from the starter kit's environment table, not derived from the code | **Accepted**; a test that computes expectations from the code can't catch the code being wrong |
 | S3: deliberate-bug check on the permission model: 2 of 6 bugs survived (leads writing other groups if the YAML ever said `all`; deactivated users still accepted) | **Required tests for both;** now 6 of 6 caught (D27) |
 | S3: a test helper leaked a SQLite connection (`with sqlite3.connect()` commits but doesn't close) | **Caught by the strict pytest setting** I kept from S0; fixed |
+| S4: added `jsonschema` so API tests validate responses against `contracts/tools.schema.json` | **Accepted**: the contract Part B must honour is tested from Part A (D33) |
+| S4: golden test computes one group-week's tokens and cost straight from the export files and compares with the API | **Kept** as the end-to-end check from file to API |
+| S4: deliberate-bug check on access paths (skipped check, all-groups leak, 404-before-403, ranking, contract drift, period anchoring): 6 of 6 caught | **Accepted** |
+| S4: when I asked to commit, flagged that `make check` was red (an unused import, then strict type errors in a test) | **Held the commit** until the check was green |

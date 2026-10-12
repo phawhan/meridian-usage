@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.deps import Unidentified
-from app.api.routes import me, meta
+from app.api.routes import capabilities, directory, me, meta, usage
 from app.core.config import Settings
 from app.core.env_config import load_policy
 from app.db.session import connect, init_db
@@ -46,7 +46,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(AccessDenied, _denied)
     app.add_exception_handler(Unidentified, _unidentified)
     app.include_router(meta.router, prefix=API_PREFIX)
-    app.include_router(me.router, prefix=API_PREFIX)
+    for router in (me.router, usage.router, capabilities.router, directory.router):
+        app.include_router(router, prefix=API_PREFIX)
     return app
 
 

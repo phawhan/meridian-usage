@@ -190,7 +190,7 @@ AC: invalid env YAML stops startup; missing/unknown `X-User-Id` -> 401; missing 
 | S3.4 | `services/capabilities.py`: seed, get, set (transaction + audit) | fresh prod DB matches baseline; write survives a new app instance; audit row |
 | S3.5 | Drift flag (live != baseline) + admin-only reset | drift shown; reset audited |
 
-### S4 Usage and admin API (`/api/v1`)
+### S4 Usage and admin API (`/api/v1`) (done 2026-10-12)
 **As a** platform owner **I want** usage and cost sliced by platform, group, week, month, model and product **so that** I can see who uses what and at what cost.
 AC: every route goes through `authz`; typed responses in OpenAPI; `Denial` shape matches `contracts/tools.schema.json`.
 
