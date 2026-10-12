@@ -25,7 +25,9 @@ def init_db(conn: sqlite3.Connection, app_env: str) -> None:
     conn.executescript(SCHEMA_FILE.read_text())
     with conn:
         conn.execute(
-            "INSERT OR IGNORE INTO meta (key, value) VALUES ('environment', ?)", (app_env,)
+            "INSERT OR IGNORE INTO meta (key, value, created_by, updated_by)"
+            " VALUES ('environment', ?, 'system:startup', 'system:startup')",
+            (app_env,),
         )
     stored = conn.execute("SELECT value FROM meta WHERE key = 'environment'").fetchone()["value"]
     if stored != app_env:

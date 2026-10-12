@@ -24,3 +24,8 @@ Tool: Claude Code (VS Code extension). Format: date | what AI did | what I decid
 | S0.4 tests: AI's first version leaked SQLite connections (Python 3.13 ResourceWarning) | Fixed with `closing()`; pytest now turns ResourceWarning into a failure so leaks can't come back |
 | S0 smoke test: env-guard check printed nothing; AI re-ran it rather than assuming success (macOS has no `timeout`) | Guard confirmed: `database belongs to 'prod', refusing to start as 'dev'` |
 | S0.5: `create-vite` now ships oxlint instead of ESLint, TS 6, Vite 8 | Kept the template defaults rather than swapping tooling |
+| S1 schema: AI's first draft had no audit columns or comments | **Overruled.** Audit columns (`created_*/updated_*`) and table/column comments on every table (D16) |
+| S1 schema: AI proposed a per-directory `directory_sync` log table | **Overruled.** One `source_file` row per file of any kind + `sync_run` per pass (D15); AI refined the skip rule (latest version at the path, any status) |
+| S1 design: AI changed plan's "replace-all" to upsert + soft-deactivate, foreseeing S2's FK from facts to users | Accepted (D14) |
+| S1 lint: ruff suggested `for k in row` instead of `row.keys()` on `sqlite3.Row` | **AI rejected the auto-fix** (iterating a Row yields values, not keys); mapped columns explicitly |
+| S1 tests: all 29 passed first run; AI injected 3 bugs (duplicate check, deactivation, skip rule) to prove the tests catch them | Each caught; code restored |

@@ -29,12 +29,13 @@ meridian-usage/
 │   ├── uv.lock
 │   ├── app/
 │   │   ├── main.py               FastAPI app + lifespan (load config, sync directory, ingest, seed)
-│   │   ├── cli.py                `meridian ingest | sync-directory | seed`
+│   │   ├── cli.py                `meridian sync` (one pass: directory now, usage exports in S2)
 │   │   ├── core/                 config.py (settings), env_config.py (YAML -> Policy), periods.py, money.py
 │   │   ├── db/                   schema.sql, session.py (sqlite3 connection, schema apply, env marker)
-│   │   ├── models/               pydantic: sources.py (raw shapes), domain.py, api.py (responses), denial.py
-│   │   ├── repositories/         directory.py, raw.py, facts.py, capabilities.py, ingest_log.py
+│   │   ├── models/               pydantic: sources/ (one module per source), domain.py, api.py, denial.py
+│   │   ├── repositories/         sync_log.py, directory.py, raw.py, facts.py, capabilities.py
 │   │   ├── services/
+│   │   │   ├── sync.py           one pass, recorded as a sync_run
 │   │   │   ├── directory_sync.py
 │   │   │   ├── ingestion/        discover.py, claude.py, gemini.py, attribute.py, pipeline.py
 │   │   │   ├── authz.py
@@ -123,8 +124,9 @@ YAML `scopes` = policy, reloaded in full every start. YAML `capability_defaults`
 | Table | Written by | Purpose |
 |---|---|---|
 | `meta` | S0 | env marker, schema version |
-| `groups`, `users`, `user_groups`, `directory_sync` | S1 only | read-only mirror of the IdP snapshot |
-| `ingest_file`, `ingest_run`, `ingest_issue` | S2 | file tracking, run counts, quarantine and warnings |
+| `sync_run`, `source_file` | S1 (used by S2) | every sync pass and every file version taken in: directory, usage exports, env config (D15) |
+| `groups`, `users`, `user_groups` | S1 only | read-only mirror of the IdP snapshot; soft-deactivated, never deleted (D14) |
+| `ingest_issue` | S2 | quarantined rows and warnings, per `source_file`
 | `raw_claude_usage`, `raw_claude_cost`, `raw_gemini_billing` | S2 | verbatim source rows (JSON), unique on natural key |
 | `usage_fact` | S2 | unified model |
 | `capability_state`, `capability_audit` | S3 (API) | live switches + change history |
@@ -148,32 +150,32 @@ AC: `make setup && make test` green; `make run` serves `/api/v1/healthz`; `make 
 | S0.5 | Frontend: `npm create vite` (react-ts), TanStack Query, `/api` proxy | `npm run build` passes |
 | S0.6 | Makefile, `docs/decisions.md`, `docs/ai-usage-log.md` | n/a |
 
-### S1 Directory sync
+### S1 Directory sync (done 2026-10-12)
 **As a** platform owner **I want** the identity snapshot mirrored locally **so that** usage resolves to real people and groups.
-AC: changed snapshot replaces the mirror in one transaction; unchanged = no-op; invalid snapshot rejected and the old mirror kept.
+AC: a changed snapshot is applied in one transaction (upsert present, deactivate missing, membership diff); unchanged = no new `source_file` row; invalid snapshot recorded as `rejected` with its errors and the old mirror kept; every write fills the audit columns.
 
 | ID | Sub-task | Tests |
 |---|---|---|
 | S1.1 | Source models for users.json / groups.json | malformed rejected |
 | S1.2 | Validation: unique lowercased emails, group refs exist, lead exists and is in their group | one failing fixture per rule |
-| S1.3 | Replace-all transaction, record `exported_at` + sha256 | same hash skipped |
+| S1.3 | `sync_run` + `source_file` bookkeeping; skip when the latest version recorded at the same path (applied or rejected) has the same sha256; apply users + groups as a pair | same hash skipped; older snapshot re-delivered is re-applied; leaver deactivated, not deleted |
 | S1.4 | Lookups: user_id, email, rbac_group_id, gcp_project_id | lookup tests |
 
 ### S2 Usage ingestion pipeline
 **As a** platform owner **I want** both exports merged into one model **so that** I can compare usage and cost across platforms.
 Stages: **discover -> extract (raw) -> transform -> attribute -> load (facts) -> report**
-AC: re-run with no new files changes nothing; a delta file updates only its days; sum(facts) == sum(raw) for tokens and cost per platform; every raw row lands in a fact or in `ingest_issue`; runs at startup and via `meridian ingest`.
+AC: re-run with no new files changes nothing; a delta file updates only its days; sum(facts) == sum(raw) for tokens and cost per platform; every raw row lands in a fact or in `ingest_issue`; every raw row carries its `source_file_id`; runs at startup and via `meridian ingest`.
 
 | ID | Sub-task | Tests |
 |---|---|---|
-| S2.1 | Discover: scan folders, sha256, skip `done` files | seen skipped, new picked |
+| S2.1 | Discover: scan folders, sha256, skip per the S1.3 rule, record in `source_file` | seen skipped, new picked |
 | S2.2 | Extract: source models; upsert raw on natural key (Claude: user, day, product, model[, cost_type]; Gemini: project, day, sku, owner, agent); later delivery wins | re-delivery replaces, no duplicate |
 | S2.3 | Transform Claude: join usage + cost; cents string -> Decimal -> nano-USD; input = uncached + cache_read + cache_5m + cache_1h; check `total_tokens`; web_search cost folded in, breakdown in metadata | conversions; web_search join; total mismatch raises; usage without cost -> `cost_pending` issue |
 | S2.4 | Transform Gemini: labels -> dict; SKU -> direction; pivot Input/Output; USD -> nano-USD; `requests = NULL`; product = agent | pivot; SKU parse; BigQuery timestamp parse |
 | S2.5 | Attribute: user via user_id / owner email; group via rbac_group_id / project.id; mismatch -> warning; unknown -> quarantine | quarantine + warning fixtures |
 | S2.6 | Load: partition overwrite of (platform, date) in one transaction | delta touches only its days |
-| S2.7 | Report: `ingest_run` counts | counts match |
-| S2.8 | Triggers: lifespan + CLI | startup ingests once |
+| S2.7 | Report: `rows_*` counts on `source_file`, run status on `sync_run` | counts match |
+| S2.8 | Add ingestion to `services/sync.run_sync` (already called by lifespan + `meridian sync`) | startup ingests once |
 
 ### S3 Policy and capability controls
 **As a** platform admin **I want** per-group capability switches with enforced rules **so that** only the right people can see and change them.

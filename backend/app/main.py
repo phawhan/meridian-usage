@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from app.api.routes import meta
 from app.core.config import Settings
 from app.db.session import connect, init_db
+from app.services.sync import run_sync
 
 API_PREFIX = "/api/v1"
 
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     conn = connect(settings.database_file)
     try:
         init_db(conn, settings.app_env)
+        run_sync(conn, settings, trigger="startup")
     finally:
         conn.close()
     yield
