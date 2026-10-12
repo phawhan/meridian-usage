@@ -210,3 +210,15 @@ def test_bad_input_is_422(
 def test_identity_is_checked_before_input(clients: dict[str, TestClient]) -> None:
     response = clients["prod"].get("/api/v1/usage/summary", params={"period": "2026-W36"})
     assert response.status_code == 401
+
+
+def test_periods_list_what_the_data_covers(clients: dict[str, TestClient]) -> None:
+    body = clients["prod"].get("/api/v1/periods").json()
+    assert (body["data_from"], body["data_to_exclusive"]) == ("2026-08-03", "2026-09-28")
+    assert body["periods"] == [
+        "last_7_days",
+        "last_30_days",
+        "2026-09",
+        "2026-08",
+        *[f"2026-W{w}" for w in range(39, 31, -1)],
+    ]

@@ -49,3 +49,8 @@ My working notes on how I used AI while building this, kept as I went. The READM
 | S4: golden test computes one group-week's tokens and cost straight from the export files and compares with the API | **Kept** as the end-to-end check from file to API |
 | S4: deliberate-bug check on access paths (skipped check, all-groups leak, 404-before-403, ranking, contract drift, period anchoring): 6 of 6 caught | **Accepted** |
 | S4: when I asked to commit, flagged that `make check` was red (an unused import, then strict type errors in a test) | **Held the commit** until the check was green |
+| S5: built the React console (persona switcher, usage cards and tables, capability grid with reset, change history) and a `/periods` endpoint for the period picker | **Accepted**; kept it plain as the brief asks |
+| S5: left a stray placeholder function in a route file | **Caught in review** and removed |
+| S5: no browser in the AI session, so it verified the console's request flow through the Vite proxy as three personas, and asked me to check the screens myself | **Pending:** my own check of the screens in the browser (Chloe, Priya, Daniel in prod; Priya in staging) |
+| S7: drafted the README's factual sections from the code, the decisions log and this log; left "How I used AI tools" as a marked draft | **I rewrite that section in my own words** before submitting |
+| S7: checked the README's claims against the repo and corrected three (Node version, table count, number of injected bugs) | **Accepted** |

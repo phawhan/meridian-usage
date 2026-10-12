@@ -201,7 +201,7 @@ AC: every route goes through `authz`; typed responses in OpenAPI; `Denial` shape
 | S4.3 | Routes: `GET /me`, `/usage/summary`, `/usage/breakdown`, `/usage/top-users`, `/capabilities`, `PUT /capabilities/{group}/{capability}`, `/capabilities/audit`, `/ingest/runs`, `/healthz` | TestClient happy + denied |
 | S4.4 | `GET /directory/users` for the persona switcher (simulated-identity affordance, flagged in README) | returns 22 |
 
-### S5 Admin console (React, mocked identity)
+### S5 Admin console (React, mocked identity) (built 2026-10-12; manual browser check pending)
 **As a** platform owner **I want** a plain console **so that** I can read usage and flip switches without curl.
 AC: switching persona changes exactly what the API allows; denials shown as messages, never blank screens; toggles disabled without write scope (the server still enforces).
 
@@ -221,7 +221,7 @@ Manual check script: Chloe (admin), Priya (lead), Daniel (member) in each env.
 | S6.2 | Authz matrix: role x env x action x own/other group -> expected result, parametrised |
 | S6.3 | `.github/workflows/ci.yml`: backend `ruff check`, `mypy`, `pytest`; frontend `tsc --noEmit`, `npm run build` (Part B adds provisioning validation) |
 
-### S7 Part A write-up
+### S7 Part A write-up (done 2026-10-13; AI usage section to be rewritten in my words)
 **As a** reviewer **I want** the Part A reasoning documented **so that** I can judge the decisions, not just the code.
 | ID | Sub-task |
 |---|---|

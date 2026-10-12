@@ -1,26 +1,64 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 
-type Health = { status: string; environment: string }
+import { RefusalBanner } from './components/RefusalBanner'
+import { PersonaSwitcher } from './components/PersonaSwitcher'
+import { useDirectory, useMe } from './hooks/queries'
+import { usePersona } from './hooks/usePersona'
+import { CapabilitiesPage } from './pages/CapabilitiesPage'
+import { UsagePage } from './pages/UsagePage'
 
-async function fetchHealth(): Promise<Health> {
-  const response = await fetch('/api/v1/healthz')
-  if (!response.ok) throw new Error(`healthz returned ${response.status}`)
-  return response.json() as Promise<Health>
-}
+type Tab = 'usage' | 'capabilities'
 
 export default function App() {
-  const health = useQuery({ queryKey: ['healthz'], queryFn: fetchHealth })
+  const [persona, setPersona] = usePersona()
+  const [tab, setTab] = useState<Tab>('usage')
+  const directory = useDirectory()
+  const me = useMe(persona)
 
   return (
-    <main>
-      <h1>Meridian usage admin</h1>
-      {health.isPending && <p>Connecting to the usage service…</p>}
-      {health.isError && <p role="alert">Usage service unreachable: {health.error.message}</p>}
-      {health.data && (
-        <p>
-          Service {health.data.status}, environment <strong>{health.data.environment}</strong>
-        </p>
-      )}
-    </main>
+    <>
+      <header className="topbar">
+        <div>
+          <h1>Meridian AI usage</h1>
+          {me.data && <span className={`env env-${me.data.environment}`}>{me.data.environment}</span>}
+        </div>
+        {directory.data && <PersonaSwitcher users={directory.data} value={persona} onChange={setPersona} />}
+      </header>
+
+      <main>
+        {directory.error && <RefusalBanner error={directory.error} />}
+        {!persona && <p className="banner banner-note">Choose a person to see what they can see.</p>}
+        {me.error && <RefusalBanner error={me.error} />}
+
+        {me.data && (
+          <>
+            <p className="whoami">
+              <strong>{me.data.name}</strong> · {me.data.role.replace('_', ' ')} · {me.data.group_ids.join(', ')}
+              <span className="muted">
+                {' '}
+                · scopes: {me.data.scopes.length ? me.data.scopes.join(', ') : 'none'}
+              </span>
+            </p>
+            <nav className="tabs" aria-label="Sections">
+              <button type="button" aria-current={tab === 'usage'} onClick={() => setTab('usage')}>
+                Usage and cost
+              </button>
+              <button
+                type="button"
+                aria-current={tab === 'capabilities'}
+                onClick={() => setTab('capabilities')}
+              >
+                Capability controls
+              </button>
+            </nav>
+            {tab === 'usage' ? (
+              <UsagePage key={persona} me={me.data} />
+            ) : (
+              <CapabilitiesPage key={persona} me={me.data} users={directory.data ?? []} />
+            )}
+          </>
+        )}
+      </main>
+    </>
   )
 }

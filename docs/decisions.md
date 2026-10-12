@@ -35,3 +35,6 @@ Running log; each entry feeds the README. Format: ID, decision, why.
 - D31 Responses carry `period.complete`: false when the data doesn't cover the whole period (2026-08 starts on the 3rd, 2026-09 ends on the 27th), so a partial month isn't mistaken for a quiet one.
 - D32 `GET /directory/users` is unauthenticated: it exists only for the simulated-identity persona switcher. A real deployment takes identity from SSO and drops this endpoint.
 - D33 API responses are tested against `contracts/tools.schema.json`, so the shapes the Part B tools return are fixed from Part A onward.
+- D34 The admin console is a thin client: disabled toggles and hidden groups are hints taken from `GET /me`; every request is still checked by the server. Query keys include the persona, so switching person never shows the previous person's cached data.
+- D35 Frontend types are hand-written mirrors of the API models (small API); generating them from the OpenAPI schema is the next step if it grows. No frontend unit tests: the brief says the UI can be plain, and the behaviour that matters (who sees what) is tested in the backend. Listed as a skipped standard.
+- D36 `GET /periods` lists the period labels the data covers (relative periods, months, ISO weeks) so pickers never offer an empty period. Not access-controlled: it reveals only the data's date range.
