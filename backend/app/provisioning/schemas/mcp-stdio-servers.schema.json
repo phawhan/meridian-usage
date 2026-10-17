@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "mcpServers map of local (stdio) servers, as in claude_desktop_config.json and a plugin's .mcp.json",
+  "type": "object",
+  "required": ["mcpServers"],
+  "additionalProperties": false,
+  "properties": {
+    "mcpServers": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command", "args"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "minLength": 1, "pattern": "^[^\\s]+$" },
+          "args": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

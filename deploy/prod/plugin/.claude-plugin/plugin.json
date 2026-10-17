@@ -1,0 +1,24 @@
+{
+  "name": "meridian-usage",
+  "displayName": "Meridian AI usage",
+  "version": "0.2.0",
+  "description": "Ask about your team's Claude and Gemini usage and cost, and see or change capability switches, as your directory role allows in prod.",
+  "author": {
+    "name": "Meridian IT Platform"
+  },
+  "repository": "https://github.com/phawhan/meridian-usage",
+  "keywords": [
+    "usage",
+    "cost",
+    "mcp",
+    "prod"
+  ],
+  "userConfig": {
+    "user_id": {
+      "type": "string",
+      "title": "Directory user ID",
+      "description": "Who the connector acts as (simulated identity; in production this comes from single sign-on). Your role and group are looked up in the directory, never taken from here.",
+      "required": true
+    }
+  }
+}

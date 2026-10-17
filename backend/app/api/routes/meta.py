@@ -12,7 +12,13 @@ router = APIRouter(tags=["meta"])
 
 @router.get("/healthz")
 def healthz(request: Request) -> dict[str, str]:
-    return {"status": "ok", "environment": request.app.state.settings.app_env}
+    """Liveness, plus the environment and the hash of the policy file in force, so the
+    connector can refuse to start against a service running different rules."""
+    return {
+        "status": "ok",
+        "environment": request.app.state.settings.app_env,
+        "policy_sha256": request.app.state.policy.sha256,
+    }
 
 
 class Periods(BaseModel):

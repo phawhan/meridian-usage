@@ -1,0 +1,27 @@
+{
+  "name": "meridian-usage",
+  "version": "0.2.0",
+  "description": "Meridian AI usage and capability controls (prod)",
+  "mcpServers": {
+    "meridian-usage": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.13",
+        "--from",
+        "git+https://github.com/phawhan/meridian-usage@v0.2.0#subdirectory=backend",
+        "meridian-connector",
+        "--env",
+        "prod"
+      ]
+    }
+  },
+  "contextFileName": "GEMINI.md",
+  "settings": [
+    {
+      "name": "Directory user ID",
+      "description": "Who the connector acts as (simulated identity; in production this comes from single sign-on).",
+      "envVar": "MERIDIAN_USER"
+    }
+  ]
+}

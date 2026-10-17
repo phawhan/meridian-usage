@@ -11,9 +11,13 @@ Rules, in order:
   3. Writes: platform admins any group; everyone else only their own groups (D2).
 A group that doesn't exist is refused like someone else's group, for non-admins, so a
 caller can't probe which groups exist.
+
+Requests through the assistant connector also pass authorize_connector(): the
+'usage-connector' switch must be on for the caller's own group (D1, D37).
 """
 
 import sqlite3
+from collections.abc import Mapping
 from typing import Literal
 
 from app.core.env_config import Policy, Scope
@@ -62,6 +66,23 @@ def authorize(caller: User, action: Action, group_id: str, policy: Policy) -> De
     )
 
 
+def authorize_connector(
+    caller: User, connector_on: Mapping[str, bool], policy: Policy
+) -> Denial | None:
+    """The 'usage-connector' switch decides who may use the assistant tools, so it is checked on
+    the caller's own groups, every one of which must have it on (fail closed). It does not
+    decide whose data may be read: an admin whose group has it on can still ask about a group
+    that has it off; authorize() governs that. A caller with no group is refused."""
+    off = [g for g in caller.group_ids if not connector_on.get(g, False)]
+    if caller.group_ids and not off:
+        return None
+    where = f"your group ({', '.join(off)})" if off else "callers without a group"
+    return Denial(
+        reason=f"the usage connector is switched off for {where} in {policy.environment};"
+        " a platform admin can switch it on",
+    )
+
+
 def visible_groups(
     caller: User, action: Action, policy: Policy, all_groups: list[str]
 ) -> list[str]:
@@ -78,7 +99,26 @@ def enforce(
     channel: Channel = "api",
 ) -> None:
     """authorize(), logging and raising on refusal. Request handlers call this."""
-    denial = authorize(caller, action, group_id, policy)
+    _refuse_if(conn, authorize(caller, action, group_id, policy), caller, action, group_id, channel)
+
+
+def enforce_connector(
+    conn: sqlite3.Connection, caller: User, connector_on: Mapping[str, bool], policy: Policy
+) -> None:
+    """authorize_connector(), logging and raising on refusal."""
+    denial = authorize_connector(caller, connector_on, policy)
+    group = caller.group_ids[0] if caller.group_ids else None
+    _refuse_if(conn, denial, caller, "use_connector", group, "connector")
+
+
+def _refuse_if(
+    conn: sqlite3.Connection,
+    denial: Denial | None,
+    caller: User,
+    action: str,
+    group_id: str | None,
+    channel: Channel,
+) -> None:
     if denial is None:
         return
     access_log.record(

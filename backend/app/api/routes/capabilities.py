@@ -1,16 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
 from app.api.access import many_groups, one_group
-from app.api.deps import Caller, CurrentPolicy, Db, PolicyFileId
+from app.api.deps import Caller, CurrentPolicy, Db, PolicyFileId, RequestChannel, connector_gate
 from app.models.api import AuditEntry, CapabilityChange, CapabilityStatus
 from app.models.domain import Capability
 from app.repositories import capabilities as repo
 from app.services import capabilities
 from app.services.capabilities import CapabilityState
 
-router = APIRouter(prefix="/capabilities", tags=["capabilities"])
+router = APIRouter(
+    prefix="/capabilities", tags=["capabilities"], dependencies=[Depends(connector_gate)]
+)
 
 GroupParam = Annotated[
     str | None, Query(description="group_id; omitted: every group the caller may see")
@@ -31,9 +33,13 @@ def _out(state: CapabilityState) -> CapabilityStatus:
 
 @router.get("", response_model=list[CapabilityStatus])
 def list_capabilities(
-    caller: Caller, policy: CurrentPolicy, conn: Db, group: GroupParam = None
+    caller: Caller,
+    channel: RequestChannel,
+    policy: CurrentPolicy,
+    conn: Db,
+    group: GroupParam = None,
 ) -> list[CapabilityStatus]:
-    groups = many_groups(conn, caller, "read_capabilities", policy, group)
+    groups = many_groups(conn, caller, "read_capabilities", policy, group, channel)
     return [_out(s) for s in capabilities.states(conn, policy, groups)]
 
 
@@ -43,13 +49,14 @@ def set_capability(
     capability: Capability,
     change: CapabilityChange,
     caller: Caller,
+    channel: RequestChannel,
     policy: CurrentPolicy,
     policy_file_id: PolicyFileId,
     conn: Db,
 ) -> CapabilityStatus:
     """Enable or disable a capability for a group. Needs capabilities:write; team leads may
     only change their own group. Setting the current value again changes nothing."""
-    group_id = one_group(conn, caller, "write_capability", policy, group)
+    group_id = one_group(conn, caller, "write_capability", policy, group, channel)
     state = capabilities.change(
         conn,
         policy,
@@ -67,12 +74,13 @@ def reset_capability(
     group: str,
     capability: Capability,
     caller: Caller,
+    channel: RequestChannel,
     policy: CurrentPolicy,
     policy_file_id: PolicyFileId,
     conn: Db,
 ) -> CapabilityStatus:
     """Return a switch to this environment's baseline (capability_defaults)."""
-    group_id = one_group(conn, caller, "write_capability", policy, group)
+    group_id = one_group(conn, caller, "write_capability", policy, group, channel)
     state = capabilities.change(
         conn,
         policy,
@@ -88,13 +96,14 @@ def reset_capability(
 @router.get("/audit", response_model=list[AuditEntry])
 def audit(
     caller: Caller,
+    channel: RequestChannel,
     policy: CurrentPolicy,
     conn: Db,
     group: GroupParam = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
 ) -> list[AuditEntry]:
     """Who changed which switch, when, and under which environment config version."""
-    groups = many_groups(conn, caller, "read_capabilities", policy, group)
+    groups = many_groups(conn, caller, "read_capabilities", policy, group, channel)
     return [
         AuditEntry(
             group=r["group_id"],

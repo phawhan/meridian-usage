@@ -1,0 +1,97 @@
+{
+  "manifest_version": 1,
+  "environment": "dev",
+  "server_name": "meridian-usage-dev",
+  "api_url": "http://127.0.0.1:8000",
+  "source": {
+    "path": "environments/dev.yaml",
+    "sha256": "651cfb41985393ee039b5c80aec36b710d65caf135ba9d8e251a730ad42504ae"
+  },
+  "scopes": {
+    "usage:read": {
+      "roles": [
+        "member",
+        "team_lead",
+        "platform_admin"
+      ],
+      "group_visibility": "all"
+    },
+    "capabilities:write": {
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ],
+      "group_visibility": "own_group"
+    }
+  },
+  "tools": {
+    "usage_summary": {
+      "scope": "usage:read",
+      "roles": [
+        "member",
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "top_users": {
+      "scope": "usage:read",
+      "roles": [
+        "member",
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "capability_status": {
+      "scope": "usage:read",
+      "roles": [
+        "member",
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "set_capability": {
+      "scope": "capabilities:write",
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ]
+    }
+  },
+  "capability_defaults": {
+    "usage-connector": "enabled",
+    "web-search": "enabled",
+    "code-execution": "enabled"
+  },
+  "baseline": {
+    "clinical-operations": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    },
+    "finance": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    },
+    "hr": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    },
+    "it-platform": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    },
+    "medical-writing": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    },
+    "regulatory-affairs": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": true
+    }
+  }
+}

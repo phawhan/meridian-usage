@@ -1,16 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.api.access import many_groups, one_group
-from app.api.deps import Caller, CurrentPolicy, Db
+from app.api.deps import Caller, CurrentPolicy, Db, RequestChannel, connector_gate
 from app.core.periods import PERIOD_PATTERN, DataWindow, Period, PeriodError, resolve
 from app.models.api import Breakdown, Dimension, TopUser, UsageSummary
 from app.repositories.usage import DIMENSION_COLUMNS
 from app.services import usage
 from app.services.usage import data_window
 
-router = APIRouter(prefix="/usage", tags=["usage"])
+router = APIRouter(prefix="/usage", tags=["usage"], dependencies=[Depends(connector_gate)])
 
 PeriodParam = Annotated[
     str,
@@ -32,10 +32,15 @@ def _period(label: str, window: DataWindow) -> Period:
 
 @router.get("/summary", response_model=UsageSummary)
 def summary(
-    caller: Caller, policy: CurrentPolicy, conn: Db, period: PeriodParam, group: GroupParam = None
+    caller: Caller,
+    channel: RequestChannel,
+    policy: CurrentPolicy,
+    conn: Db,
+    period: PeriodParam,
+    group: GroupParam = None,
 ) -> UsageSummary:
     """Tokens and cost per platform for one group. Omitted group: the caller's own."""
-    group_id = one_group(conn, caller, "read_usage", policy, group)
+    group_id = one_group(conn, caller, "read_usage", policy, group, channel)
     window = data_window(conn)
     return usage.summary(conn, group_id, _period(period, window), window)
 
@@ -43,6 +48,7 @@ def summary(
 @router.get("/breakdown", response_model=Breakdown)
 def breakdown(
     caller: Caller,
+    channel: RequestChannel,
     policy: CurrentPolicy,
     conn: Db,
     period: PeriodParam,
@@ -60,7 +66,7 @@ def breakdown(
             status_code=422,
             detail=f"'by' takes distinct values from {', '.join(DIMENSION_COLUMNS)}; got {by!r}",
         )
-    groups = many_groups(conn, caller, "read_usage", policy, group)
+    groups = many_groups(conn, caller, "read_usage", policy, group, channel)
     window = data_window(conn)
     dims: list[Dimension] = dimensions  # type: ignore[assignment]  # validated above
     return usage.breakdown(conn, groups, _period(period, window), window, dims)
@@ -69,6 +75,7 @@ def breakdown(
 @router.get("/top-users", response_model=list[TopUser])
 def top_users(
     caller: Caller,
+    channel: RequestChannel,
     policy: CurrentPolicy,
     conn: Db,
     period: PeriodParam,
@@ -76,5 +83,5 @@ def top_users(
     limit: Annotated[int, Query(ge=1, le=25)] = 10,
 ) -> list[TopUser]:
     """Heaviest users by total tokens. Omitted group: every group the caller may see."""
-    groups = many_groups(conn, caller, "read_usage", policy, group)
+    groups = many_groups(conn, caller, "read_usage", policy, group, channel)
     return usage.top_users(conn, groups, _period(period, data_window(conn)), limit)

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claude plugin manifest (.claude-plugin/plugin.json), the fields this repo uses",
+  "type": "object",
+  "required": ["name", "version", "description", "author"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$", "not": { "pattern": "^(claude|anthropic|anthropics|cc-plugin)-" } },
+    "displayName": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "description": { "type": "string", "minLength": 1 },
+    "author": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": { "name": { "type": "string" }, "email": { "type": "string" }, "url": { "type": "string" } }
+    },
+    "repository": { "type": "string" },
+    "keywords": { "type": "array", "items": { "type": "string" } },
+    "userConfig": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type", "title", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "enum": ["string", "number", "boolean", "directory", "file"] },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "required": { "type": "boolean" },
+          "default": {},
+          "sensitive": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

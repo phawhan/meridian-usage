@@ -54,3 +54,26 @@ My working notes on how I used AI while building this, kept as I went. The READM
 | S5: no browser in the AI session, so it verified the console's request flow through the Vite proxy as three personas, and asked me to check the screens myself | **Pending:** my own check of the screens in the browser (Chloe, Priya, Daniel in prod; Priya in staging) |
 | S7: drafted the README's factual sections from the code, the decisions log and this log; left "How I used AI tools" as a marked draft | **I rewrite that section in my own words** before submitting |
 | S7: checked the README's claims against the repo and corrected three (Node version, table count, number of injected bugs) | **Accepted** |
+
+## Part B
+
+| AI proposal or action | My call |
+|---|---|
+| Asked which platform to build for, then explained MCP when I asked whether Claude and Gemini each need their own server: one server, and only registration and packaging differ per host | **I chose Claude first**; Gemini CLI extension is optional (B8) |
+| Proposed the connector in TypeScript over HTTP to the Part A API, with scoping checked in both the connector and the API, kept in step by a shared case file | **Overruled** after B0 was built in TypeScript: the brief doesn't require TypeScript and the console already covers it, so the connector is Python. It reuses `authorize()`, which removes the duplicate rules and the case file. Kept HTTP and the two-layer check |
+| Wrote `docs/PART_B_PLAN.md` (B0-B9) after I asked that it cover every Part B requirement, including Claude Desktop registration as well as the plugin | **Accepted**, along with its four open defaults (switch checked on the caller's group, connector refusals logged to stderr, `deploy/` committed, Desktop install on me) |
+| B0 (Python): `app/connector/` with a `meridian-connector` entry point; identity fixed at start from flags or env vars, unknown and abbreviated flags rejected; checked the `mcp` 2.x API in the installed package before using it (`FastMCP` is now `MCPServer`) | **Accepted** |
+| B1: `usage-connector` switch checked on the caller's own groups for requests marked `X-Channel: connector`; refusals logged with their channel; showed the tests fail when the gate is removed | **Accepted** |
+| B1: its own regex edit missed two call sites, so connector refusals would have been logged as `api`; it found this, then made the channel a required argument so the type checker catches any future miss | **Accepted** the fix and the reason for it |
+| B2: read the installed `mcp` 2.3 source instead of assuming the 1.x API; found the high-level server silently drops unknown arguments, so it used the low-level server with the contract's own schemas | **Accepted** |
+| B2: proposed checking the live switch only at the service (same request as the data) and the static rules at both doors, to avoid a gap between checking and fetching | **Accepted** |
+| B3: scoping tests through the MCP protocol against the real service, asserting that refused calls send nothing; two deliberate bugs (no local check, no input validation) both caught; one stdio test with real processes | **Accepted** |
+| B4: checked Anthropic's current plugin, marketplace and MCP docs before rendering anything, rather than writing the formats from memory | **Accepted** |
+| B4: `meridian provision` renders 14 files for three environments, validates them (10 rules, each with a failing test) and `--check` fails on drift; CI runs it plus `claude plugin validate --strict` | **Accepted** |
+| B4: built the wheel and installed it outside the repo before trusting the packaging; this found that uvx picked Python 3.10, so the host config now pins 3.13 | **Accepted** |
+| B5: confirmed by running it that the release install path works (uvx building from the backend directory, started from `/` as Claude Desktop does) before relying on it; the Desktop and plugin steps that need the app are in `docs/demo/RECORDING.md` | **Pending:** I install Claude Desktop, register, and record |
+| B6: transcript generator against a fresh prod service; a test it wrote caught that its own test harness built the server differently from the real entry point, so both now share one function | **Accepted** |
+| B6: noticed the model would read "last month" from today's date while the data ends 2026-09-27; the connector now tells the model the data window | **Accepted** |
+| B8: rendered a Gemini CLI extension and settings fragment from Google's extension reference; tried the real Gemini CLI in a throwaway home directory, the install hung waiting for input, so it is reported as validated, not run | **Accepted** |
+| B7: drafted the note to team leads from the plan and the prod configuration | **I rewrite it in my own words** before sending |
+| B9: wrote the README's Part B sections; drafted "How I used AI tools", "What I would do differently" and "In the real enterprise version" and marked them as drafts | **I rewrite the drafts in my own words**; the brief asks for my thoughts |

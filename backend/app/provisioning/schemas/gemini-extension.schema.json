@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Gemini CLI extension manifest (gemini-extension.json), the fields this repo uses",
+  "type": "object",
+  "required": ["name", "version", "mcpServers"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "description": { "type": "string" },
+    "contextFileName": { "type": "string" },
+    "mcpServers": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["command", "args"],
+        "additionalProperties": false,
+        "properties": {
+          "command": { "type": "string", "pattern": "^[^\\s]+$" },
+          "args": { "type": "array", "items": { "type": "string" } },
+          "env": { "type": "object", "additionalProperties": { "type": "string" } },
+          "cwd": { "type": "string" }
+        }
+      }
+    },
+    "settings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "envVar"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "envVar": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]*$" },
+          "sensitive": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

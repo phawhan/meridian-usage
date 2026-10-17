@@ -12,3 +12,4 @@ capability_defaults:                 # applied on first start unless the store a
   code-execution: enabled
 host:
   server_name: meridian-usage-dev
+  api_url: http://127.0.0.1:8000   # where this environment's usage service listens

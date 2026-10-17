@@ -219,7 +219,7 @@ Manual check script: Chloe (admin), Priya (lead), Daniel (member) in each env.
 |---|---|
 | S6.1 | Reconciliation test on the full starter data, golden totals computed independently from raw files |
 | S6.2 | Authz matrix: role x env x action x own/other group -> expected result, parametrised |
-| S6.3 | `.github/workflows/ci.yml`: backend `ruff check`, `mypy`, `pytest`; frontend `tsc --noEmit`, `npm run build` (Part B adds provisioning validation) |
+| S6.3 | **Moved to Part B** (brief asks for CI with provisioning, ASSIGNMENT.md line 30): one workflow runs `make check` and the rendered-config validation |
 
 ### S7 Part A write-up (done 2026-10-13; AI usage section to be rewritten in my words)
 **As a** reviewer **I want** the Part A reasoning documented **so that** I can judge the decisions, not just the code.

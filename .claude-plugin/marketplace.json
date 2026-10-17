@@ -1,0 +1,24 @@
+{
+  "name": "meridian",
+  "owner": {
+    "name": "Meridian IT Platform"
+  },
+  "description": "Meridian's internal assistant connectors",
+  "plugins": [
+    {
+      "name": "meridian-usage-dev",
+      "source": "./deploy/dev/plugin",
+      "description": "Meridian AI usage connector, dev environment"
+    },
+    {
+      "name": "meridian-usage-staging",
+      "source": "./deploy/staging/plugin",
+      "description": "Meridian AI usage connector, staging environment"
+    },
+    {
+      "name": "meridian-usage",
+      "source": "./deploy/prod/plugin",
+      "description": "Meridian AI usage connector, prod environment"
+    }
+  ]
+}

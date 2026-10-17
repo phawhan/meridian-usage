@@ -1,0 +1,96 @@
+{
+  "manifest_version": 1,
+  "environment": "prod",
+  "server_name": "meridian-usage",
+  "api_url": "http://127.0.0.1:8002",
+  "source": {
+    "path": "environments/prod.yaml",
+    "sha256": "644f1d326b6c03aaee3ba099ec31c55465aefbc60272acabae6437d5c6b91b71"
+  },
+  "scopes": {
+    "usage:read": {
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ],
+      "group_visibility": "own_group"
+    },
+    "capabilities:write": {
+      "roles": [
+        "platform_admin"
+      ],
+      "group_visibility": "own_group"
+    }
+  },
+  "tools": {
+    "usage_summary": {
+      "scope": "usage:read",
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "top_users": {
+      "scope": "usage:read",
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "capability_status": {
+      "scope": "usage:read",
+      "roles": [
+        "team_lead",
+        "platform_admin"
+      ]
+    },
+    "set_capability": {
+      "scope": "capabilities:write",
+      "roles": [
+        "platform_admin"
+      ]
+    }
+  },
+  "capability_defaults": {
+    "usage-connector": {
+      "enabled_for": [
+        "it-platform",
+        "clinical-operations"
+      ]
+    },
+    "web-search": "enabled",
+    "code-execution": "disabled"
+  },
+  "baseline": {
+    "clinical-operations": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": false
+    },
+    "finance": {
+      "usage-connector": false,
+      "web-search": true,
+      "code-execution": false
+    },
+    "hr": {
+      "usage-connector": false,
+      "web-search": true,
+      "code-execution": false
+    },
+    "it-platform": {
+      "usage-connector": true,
+      "web-search": true,
+      "code-execution": false
+    },
+    "medical-writing": {
+      "usage-connector": false,
+      "web-search": true,
+      "code-execution": false
+    },
+    "regulatory-affairs": {
+      "usage-connector": false,
+      "web-search": true,
+      "code-execution": false
+    }
+  }
+}

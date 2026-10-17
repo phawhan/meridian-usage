@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claude plugin marketplace (.claude-plugin/marketplace.json), the fields this repo uses",
+  "type": "object",
+  "required": ["name", "owner", "plugins"],
+  "additionalProperties": false,
+  "properties": {
+    "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "owner": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string" } } },
+    "description": { "type": "string" },
+    "plugins": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "source", "description"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "source": { "type": "string", "pattern": "^\\./(?!.*\\.\\.)" },
+          "description": { "type": "string" }
+        }
+      }
+    }
+  }
+}

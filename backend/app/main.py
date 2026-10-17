@@ -1,5 +1,6 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -41,7 +42,9 @@ async def _unidentified(_: Request, exc: Exception) -> JSONResponse:
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
-    app = FastAPI(title="Meridian usage service", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="Meridian usage service", version=version("meridian-usage"), lifespan=lifespan
+    )
     app.state.settings = settings or Settings()
     app.add_exception_handler(AccessDenied, _denied)
     app.add_exception_handler(Unidentified, _unidentified)

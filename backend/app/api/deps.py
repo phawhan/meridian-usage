@@ -3,6 +3,10 @@
 Identity is simulated (the brief allows it): the caller names themselves in the X-User-Id
 header and is looked up in the directory mirror. What they may do is never taken from the
 request; it comes from their directory role and the environment policy (services.authz).
+
+X-Channel says which door the request came through: the admin console ('api', default) or
+the assistant connector ('connector'). Connector requests to usage and capability routes
+must also pass the 'usage-connector' switch (connector_gate).
 """
 
 import sqlite3
@@ -16,6 +20,8 @@ from app.core.env_config import Policy
 from app.db.session import connect
 from app.models.domain import User
 from app.repositories import access_log, directory
+from app.services import capabilities
+from app.services.authz import Channel, enforce_connector
 
 
 class Unidentified(Exception):
@@ -50,8 +56,20 @@ CurrentPolicy = Annotated[Policy, Depends(get_policy)]
 PolicyFileId = Annotated[int, Depends(get_policy_file_id)]
 
 
+def get_channel(
+    x_channel: Annotated[
+        Channel, Header(description="'connector' for the MCP connector; default 'api'")
+    ] = "api",
+) -> Channel:
+    return x_channel
+
+
+RequestChannel = Annotated[Channel, Depends(get_channel)]
+
+
 def get_caller(
     conn: Db,
+    channel: RequestChannel,
     x_user_id: Annotated[
         str | None, Header(description="Simulated identity: a directory user_id")
     ] = None,
@@ -66,7 +84,7 @@ def get_caller(
     )
     access_log.record(
         conn,
-        channel="api",
+        channel=channel,
         caller=x_user_id,
         action="identify",
         target_group=None,
@@ -77,3 +95,17 @@ def get_caller(
 
 
 Caller = Annotated[User, Depends(get_caller)]
+
+
+def connector_gate(
+    caller: Caller, channel: RequestChannel, policy: CurrentPolicy, conn: Db
+) -> None:
+    """Router dependency on usage and capability routes: no-op for the admin console."""
+    if channel != "connector":
+        return
+    on = {
+        s.group_id: s.enabled
+        for s in capabilities.states(conn, policy, caller.group_ids)
+        if s.capability == "usage-connector"
+    }
+    enforce_connector(conn, caller, on, policy)

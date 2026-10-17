@@ -42,7 +42,8 @@ class EnabledFor(_Strict):
 
 
 class HostConfig(_Strict):
-    server_name: str
+    server_name: str  # the MCP server's name in host registration config
+    api_url: str  # where this environment's usage service listens; the connector calls it
 
 
 class EnvConfig(_Strict):
@@ -66,6 +67,7 @@ class Policy:
     scopes: dict[Scope, ScopeRule]
     defaults: dict[Capability, Literal["enabled", "disabled"] | EnabledFor]
     server_name: str
+    api_url: str
     path: str  # e.g. environments/prod.yaml
     sha256: str
 
@@ -104,6 +106,7 @@ def load_policy(settings: Settings) -> Policy:
         scopes=config.scopes,
         defaults=config.capability_defaults,
         server_name=config.host.server_name,
+        api_url=config.host.api_url,
         path=path.relative_to(settings.env_dir.parent).as_posix(),
         sha256=hashlib.sha256(content).hexdigest(),
     )

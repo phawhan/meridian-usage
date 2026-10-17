@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "meridian-usage": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.13",
+        "--from",
+        "git+https://github.com/phawhan/meridian-usage@v0.2.0#subdirectory=backend",
+        "meridian-connector",
+        "--env",
+        "prod",
+        "--user",
+        "${user_config.user_id}"
+      ]
+    }
+  }
+}

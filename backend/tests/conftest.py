@@ -19,3 +19,8 @@ def client(settings: Settings) -> Iterator[TestClient]:
     # Entering the context runs the lifespan (schema, env marker), like a real start.
     with TestClient(create_app(settings)) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def anyio_backend() -> str:
+    return "asyncio"

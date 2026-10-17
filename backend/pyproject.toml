@@ -1,6 +1,6 @@
 [project]
 name = "meridian-usage"
-version = "0.1.0"
+version = "0.2.0"
 description = "Usage and admin service for Meridian's Claude and Gemini assistant"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,19 +9,21 @@ dependencies = [
   "pydantic>=2.9",
   "pydantic-settings>=2.6",
   "pyyaml>=6.0.2",
+  "mcp>=2.3",
+  "httpx2>=2.13",
+  "jsonschema>=4.26",
 ]
 
 [project.scripts]
 meridian = "app.cli:main"
+meridian-connector = "app.connector.main:main"
 
 [dependency-groups]
 dev = [
     "pytest>=8.3",
-    "httpx2>=2.13",
     "ruff>=0.8",
     "mypy>=1.13",
     "types-pyyaml",
-    "jsonschema>=4.26.0",
     "types-jsonschema>=4.26.0.20261006",
 ]
 
@@ -31,6 +33,13 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
+
+# Runtime files that live outside backend/ (see app/core/resources.py).
+[tool.hatch.build.targets.wheel.force-include]
+"../contracts/tools.schema.json" = "app/_shipped/contracts/tools.schema.json"
+"../deploy/dev/permissions.json" = "app/_shipped/deploy/dev/permissions.json"
+"../deploy/staging/permissions.json" = "app/_shipped/deploy/staging/permissions.json"
+"../deploy/prod/permissions.json" = "app/_shipped/deploy/prod/permissions.json"
 
 [tool.ruff]
 line-length = 100

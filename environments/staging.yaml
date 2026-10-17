@@ -12,3 +12,4 @@ capability_defaults:
   code-execution: disabled
 host:
   server_name: meridian-usage-staging
+  api_url: http://127.0.0.1:8001   # where this environment's usage service listens
